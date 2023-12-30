@@ -19,6 +19,8 @@ class UserIsActive(BaseModel):
     is_active: bool = False
 
 class UserCreate(BaseModel):
+    fname : str
+    lname : str
     username: str
     password: str
     rePassword : str
