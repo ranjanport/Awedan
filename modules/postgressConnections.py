@@ -7,6 +7,7 @@
 
 import psycopg2
 from psycopg2 import *
+from psycopg2.extras import *
 
 from modules.parser import dbConfigs
 
@@ -24,7 +25,7 @@ def executeQuery(query):
         query (string): Postgres Supported Query
     """
     try:
-        conn = psycopg2.connect(host= host, port=port, database=database, user=user, password=password)
+        conn = psycopg2.connect(host= host, port=port, database=database, user=user, password=password, cursor_factory=RealDictCursor)
         cur = conn.cursor()
         cur = cur.execute(query)
         conn.commit()
@@ -80,6 +81,20 @@ def executeQueryByPostgres(self,query:str):
     conn.close()
 
 
+def getPostgresConnection():
+    try:
+        conn = psycopg2.connect(host= host, port=port, database=database, user=user, password=password, connect_timeout=10, cursor_factory=RealDictCursor)
+        cur = conn.cursor()
+        return conn, cur
+    except Exception as e:
+        return None, e
+
 if __name__ == '__main__':
     executeQuery('SELECT schema_name FROM information_schema.schemata; ')
 
+def checkConnection():
+    try:
+        conn = psycopg2.connect(host= host, port=port, database=database, user=user, password=password, connect_timeout=10, cursor_factory=RealDictCursor)
+        return True
+    except OperationalError as e:
+        return e
