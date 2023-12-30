@@ -14,6 +14,7 @@ pathConfig = configs['paths']
 logConfig = configs['loggings']
 mongoConfig = configs['mongo-db']
 activeDbConfig = configs['active-db']
+companyConfig = configs['company']
 
 credentialsCollection = configs['mongo-credentials-collection']
 credentialsSchema =  configs['postgresql-credentials-schema']
