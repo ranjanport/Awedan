@@ -98,7 +98,7 @@ async def register(background_tasks: BackgroundTasks, user_data: UserCreate):
         # Create a new user if not exists
         # Create verification token
         verification_token = create_access_token(data={"sub": user_data.username}, expires_delta=timedelta(seconds=ACCESS_TOKEN_EXPIRE_SECONDS))
-        hashed_password = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt())
+        hashed_password = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt()).decode()
         # hashed_password = create_password_hash(user_data.password)
         new_user = {
             "fname" :user_data.fname,
@@ -177,8 +177,7 @@ async def auth_Login(request: Request, user_data: User, background_tasks: Backgr
                 conn.close()
                 return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Username not registered")
             
-            # hashed_password = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt())
-            if not verify_password(user_data.password, existing_user['passwd']):
+            if not verify_password(user_data.password, existing_user['passwd'].encode('utf-8')):
                 return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect Password")
 
             # if not check_password(user_data.password, existing_user['passwd']):
