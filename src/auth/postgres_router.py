@@ -1,11 +1,11 @@
 from datetime import  timedelta, date
 import bcrypt, pytz
+from cryptography.fernet import Fernet
 from fastapi import APIRouter, HTTPException, Request, Form, Depends, Response, status, BackgroundTasks
 from fastapi.params import Body, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from src.auth.utils import *
-
 # Config Parameter Import
 from modules.postgressConnections import executeQueryWithReturn, executeQuery, getPostgresConnection
 from modules.mongooConnection import getMongoConnection
@@ -23,7 +23,40 @@ def getInsertValueRecord(_data:dict):
 
 def verify_password(plain_password, hashed_password):
     # Use bcrypt to check if the provided password matches the stored hashed password
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
+
+
+
+def create_password_hash(password):
+    # Convert the password into bytes
+    password_bytes = password.encode()
+    
+    # Create a key and initialize the cipher
+    key = Fernet.generate_key()
+    cipher_suite = Fernet(key)
+    
+    # Encrypt the password and convert it into a string
+    encrypted_password = cipher_suite.encrypt(password_bytes).decode()
+    
+    return encrypted_password
+
+
+def check_password(entered_password, password_hash):
+    # Convert the entered password into bytes
+    entered_password_bytes = entered_password.encode()
+    key = Fernet.generate_key()
+    # Decrypt the password_hash
+    cipher_suite = Fernet(key)
+    decrypted_password = cipher_suite.decrypt(password_hash.encode()).decode()
+
+    # Check if the entered password is correct
+    if decrypted_password == entered_password:
+        print("Password is correct.")
+        return True
+    else:
+        print("Password is incorrect.")
+        return False
+
 
 # Getting Credentials location
 schemaName = credentialsSchema['schema']
@@ -46,7 +79,9 @@ async def render_SingupPage(request:Request):
 async def render_SingupPage_Redirect(request:Request):
     return templates.TemplateResponse("routes/sign-in-redirect.html", {"request" : request, "year" : date.today().year})
 
+# bcrypt.hashpw('sdfsdfsadf'.encode('utf-8'), bcrypt.gensalt())
 
+# bcrypt.checkpw(b'sdfsdfsadf', b'\x2432622431322435386536595a70346e6e6d674d46314a72772e317365414a486973782f34643243755a724c4c5233734246544a456b68734b674b57')
 
 @PauthRouter.post("/register/user", status_code=status.HTTP_201_CREATED, response_class=JSONResponse)
 async def register(background_tasks: BackgroundTasks, user_data: UserCreate):
@@ -63,7 +98,8 @@ async def register(background_tasks: BackgroundTasks, user_data: UserCreate):
         # Create a new user if not exists
         # Create verification token
         verification_token = create_access_token(data={"sub": user_data.username}, expires_delta=timedelta(seconds=ACCESS_TOKEN_EXPIRE_SECONDS))
-        hashed_password = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt(4))
+        hashed_password = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt())
+        # hashed_password = create_password_hash(user_data.password)
         new_user = {
             "fname" :user_data.fname,
             "lname" : user_data.lname,
@@ -79,7 +115,7 @@ async def register(background_tasks: BackgroundTasks, user_data: UserCreate):
         conn.commit()
         conn.close()
         # Send verification email
-        background_tasks.add_task(send_verification_email, user_data.username, verification_token, user_data.fname)
+        # background_tasks.add_task(send_verification_email, user_data.username, verification_token, user_data.fname)
         return {"message": "User Created Please Verify Your Account", "Verification_Mail_Status": "Sent", "VerificationToken" : verification_token}
     else:
         raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(cur))
@@ -102,7 +138,7 @@ async def verify_token(background_tasks: BackgroundTasks, token: str = Query(...
             cur.execute("""UPDATE %s.users SET updated_at='%s', is_verified=%s, v_token=%s WHERE email='%s'"""%(schemaName,current_utc_time_with_timezone, True, 'Null', decoded_token['sub']))
             conn.commit()
             conn.close()
-            background_tasks.add_task(sendMail, decoded_token['sub'],  'Welcome to Awedan', 'Hi,\n\n Your Account has been succesfully verified')
+            # background_tasks.add_task(sendMail, decoded_token['sub'],  'Welcome to Awedan', 'Hi,\n\n Your Account has been succesfully verified')
             return Response(content="User Verified",background=background_tasks)
     else:
         raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(cur))
@@ -141,9 +177,12 @@ async def auth_Login(request: Request, user_data: User, background_tasks: Backgr
                 conn.close()
                 return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Username not registered")
             
-            hashed_password = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt())
+            # hashed_password = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt())
             if not verify_password(user_data.password, existing_user['passwd']):
                 return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect Password")
+
+            # if not check_password(user_data.password, existing_user['passwd']):
+            #     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect Password")
             session_token = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
             session_token = getSessionToken(data={"username":user_data.username}, expires_delta=session_token)
             client, dbs =  getMongoConnection()
