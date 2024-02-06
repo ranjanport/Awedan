@@ -13,7 +13,7 @@ from modules.mongooConnection import getMongoConnection
 from modules.parser import configs, activeDbConfig, credentialsSchema, credentialsCollection, companyConfig
 
 # Models Import
-from src.auth.models import UserCreate, User, Annotated
+from src.auth.models import UserCreate, User, Annotated, UserRemove, LoginForm
 
 
 def getInsertKeyRecord(_data:dict):
@@ -117,6 +117,38 @@ async def register(background_tasks: BackgroundTasks, user_data: UserCreate):
     else:
         raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(cur))
 
+@PauthRouter.delete("/remove/user", status_code=status.HTTP_202_ACCEPTED)
+async def delete_user(user_data : UserRemove, request : Request):
+    if user_data.username:
+        if user_data.password:
+            conn, cur = getPostgresConnection()
+            if conn:
+                cur.execute(""" select * from %s.users where email='%s' or username='%s'""" %(schemaName, user_data.username, user_data.username))
+                existing_user = cur.fetchone()
+                if not existing_user:
+                    conn.close()
+                    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Username not registered", headers={"host" : request.client.host})
+                
+                if not verify_password(user_data.password, existing_user['passwd'].encode('utf-8')):
+                    conn.close()
+                    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect Password")
+                
+                if user_data.token :
+                    if user_data.token == True:
+                        cur.execute(""" DELETE FROM %s.users where email='%s' or username='%s' """%(schemaName, user_data.username, user_data.username))
+                        conn.commit()
+                        return Response(content=str(json.dumps({"message" : "User Removed"})), headers={"host" : request.client.host})
+                    else:
+                        return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Negative Token Value")
+                else:
+                    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token Not Supplied")
+            else:
+                raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail=f"Error: Connection TimeOut")
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error: Password not Supplied")   
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error: Username not Supplied")
+        
 @PauthRouter.get("/verify/user", status_code=status.HTTP_202_ACCEPTED)
 async def verify_token(background_tasks: BackgroundTasks, token: str = Query(...)):
     # Check if the token exists
@@ -129,7 +161,11 @@ async def verify_token(background_tasks: BackgroundTasks, token: str = Query(...
         else:
             cur.execute("""select is_verified, v_token from %s.users WHERE email='%s' """%(schemaName, decoded_token['sub']))
             existing_user = cur.fetchone()
-            if existing_user['is_verified'] == True:
+            if not existing_user:
+                conn.close()
+                return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Username not registered")
+            
+            if  existing_user['is_verified'] == True:
                 conn.close()
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Error: User Already Verified")
             else:
@@ -182,9 +218,12 @@ async def reset_Token(user_data: User,  background_tasks: BackgroundTasks):
         return HTTPException(status_code=400, detail="Password not supplied")
     
 @PauthRouter.post('/loginUser') #, response_class=HTMLResponse
-# async def auth_Login(request: Request, user_data: User, background_tasks: BackgroundTasks):
-async def auth_Login(username: Annotated[str, Form()], password: Annotated[str, Form()]):
-    return Response(content=username)
+async def auth_Login(request: Request,  background_tasks: BackgroundTasks):
+    form = LoginForm(request)
+    pass
+# async def auth_Login(username: Annotated[str, Form()], password: Annotated[str, Form()]):
+    # form = LoginForm(request)
+    # return form
     # if  user_data.username != "" and  user_data.password != '':
     #     conn, cur = getPostgresConnection()
     #     if conn:
