@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Annotated
 
 class returnMessage(BaseModel):
     message: str

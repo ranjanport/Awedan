@@ -145,8 +145,8 @@
     </div>
 
     
-<main class="form-signin w-100 m-auto">
-  <form method="POST" action="/loginUser">
+<main class="form-signin w-100 m-auto", id = "signInForm">
+  <form method="POST" action="/loginUser"">
     <img class="mb-4" src="assets/sign-in/brand/mappls_banner_trig.svg" alt="" width="72" height="57">
     <h1 class="h3 mb-3 fw-normal">Sign in to Continue</h1>
 
@@ -165,11 +165,11 @@
         Remember me
       </label>
     </div>
-    <button class="btn btn-primary w-100 py-2" type="submit">Sign in</button>
+    <button class="btn btn-primary w-100 py-2" type="submit" >Sign in</button>
     <p class="mt-5 mb-3 text-body-secondary">&copy; 2023 - {{year}} Copyright - All Right Reserved</p>
   </form>
 </main>
 <script src="/assets/sign-in/elements/js/bootstrap.bundle.min.js"></script>
-
+<script src="/assets/sign-in/js/convert-form-to-body.js"></script>
 </body>
 </html>
