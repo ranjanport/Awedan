@@ -1,4 +1,4 @@
-import uvicorn
+import uvicorn, time
 from datetime import date 
 from fastapi import FastAPI
 from fastapi import FastAPI, Request
@@ -29,6 +29,7 @@ while True:
         break
     else:
         print('Trying to Connect to Database Server')
+        time.sleep(5)
 
 app.mount("/assets", StaticFiles(directory="assets", html=True), name="assets")
 templates = Jinja2Templates(directory="templates")
