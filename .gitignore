@@ -250,3 +250,9 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/linux,windows,python,visualstudiocode,react
+
+# Exlude Internal Configs
+.config.ini
+config.ini
+config/config.ini
+.env
