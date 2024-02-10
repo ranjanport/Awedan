@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
@@ -13,6 +14,11 @@ from email.message import EmailMessage
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
+
+load_dotenv()
+sender_email = os.getenv('sender_email')
+sender_password = os.getenv('sender_password')
 # from models import UserIsActive
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -57,9 +63,6 @@ def send_verification_email(email_to: str, verification_token: str, name : str):
     subject = "SingUp Verification ! - Verify Your Email"
     body = f"Hi {name} \n\n Click the link to verify your email: \n\n http://localhost:8800/verify/user?token={verification_token}"
     
-    sender_email = "aman.ranjan@mapmyindia.com"  # Replace with your email
-    sender_password = "Aman@2022"  # Replace with your email password
-
     msg = MIMEMultipart()
     msg['From'] = "PortalAuth"
     msg['To'] = email_to
@@ -76,9 +79,6 @@ def resend_verification_email(email_to: str, verification_token: str):
     subject = "Account Verification : Verify Account"
     body = f"Click the link to verify your email: \n\n http://localhost:8800/verify/user?token={verification_token}"
     
-    sender_email = "aman.ranjan@mapmyindia.com"  # Replace with your email
-    sender_password = "Aman@2022"  # Replace with your email password
-
     msg = MIMEMultipart()
     msg['From'] = "PortalAuth"
     msg['To'] = email_to
@@ -92,8 +92,6 @@ def resend_verification_email(email_to: str, verification_token: str):
     return True
 
 def sendMail(email_to: str, subject: str, body : str ):
-    sender_email = "aman.ranjan@mapmyindia.com"  # Replace with your email
-    sender_password = "Aman@2022"  # Replace with your email password
 
     msg = MIMEMultipart()
     msg['From'] = "PortalAuth"
